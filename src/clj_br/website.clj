@@ -6,7 +6,9 @@
             [clojure.pprint :as pp]
             [clojure.string :as string]
             [io.pedestal.interceptor :as interceptor]
-            [clojure.java.io :as io])
+            [clojure.java.io :as io]
+            [shadow.cljs.devtools.server :refer [start!]]
+            [shadow.cljs.devtools.api :as api])
   (:import (java.nio.charset StandardCharsets)
            (java.io File)))
 
@@ -49,13 +51,13 @@ li {
 
 (def lista-principal
   (into [:ul]
-    (for [{:keys [titulo
-                  href]} links]
-      [:li
-       [:a {:target "_blank"
-            :rel    "noreferrer noopener"
-            :href   href}
-        titulo]])))
+        (for [{:keys [titulo
+                      href]} links]
+          [:li
+           [:a {:target "_blank"
+                :rel    "noreferrer noopener"
+                :href   href}
+            titulo]])))
 
 (defn index
   [req]
@@ -73,6 +75,8 @@ li {
                         :src         "https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"}]
               [:script {:src  "https://cdn.jsdelivr.net/gh/borkdude/scittle@0.0.2/js/scittle.reagent.js"
                         :type "application/javascript"}]
+              [:script {:src "resources/public/js/main.js"
+                        :type "application/javascript"}]
               [:title "clj-br"]
               [:style (h/raw style)]]
         body [:body
@@ -87,32 +91,35 @@ li {
                {:style {:display         "flex"
                         :flex-wrap       "wrap"
                         :justify-content "center"}}
-               (for [{:keys [codigo rotulo]} [{:codigo (with-out-str
-                                                         (pp/pprint lista-principal))
-                                               :rotulo "Website"}
-                                              {:codigo (scittle!
-                                                         (+ 1 2))
-                                               :rotulo "Soma simples"}
-                                              {:codigo (scittle!
-                                                         (require '[reagent.core :as r])
-                                                         (def *n (r/atom 0))
-                                                         (defn contador
-                                                           []
-                                                           [:div
-                                                            [:div (str "Contador: " @*n)]
-                                                            [:button
-                                                             {:onClick (fn []
-                                                                         (swap! *n inc))}
-                                                             "incrementar"]]))
-                                               :rotulo "Contador"}]]
+               (for [{:keys [codigo rotulo]}
+                     [{:codigo (with-out-str
+                                 (pp/pprint lista-principal))
+                       :rotulo "Website"}
+                      {:codigo (scittle!
+                                 (+ 1 2))
+                       :rotulo "Soma simples"}
+                      {:codigo (scittle!
+                                 (require '[reagent.core :as r])
+                                 (def *n (r/atom 0))
+                                 (defn contador
+                                   []
+                                   [:div
+                                    [:div (str "Contador: " @*n)]
+                                    [:button
+                                     {:onClick (fn []
+                                                 (swap! *n inc))}
+                                     "incrementar"]]))
+                       :rotulo "Contador"}]]
                  [:li
                   [:button
                    {:data-value  codigo
                     :data-target "editor"
-                    :onClick     (string/join ";\n"
+                    :onClick     (string/join
+                                   ";\n"
                                    ["document.getElementById(this.dataset.target).value = this.dataset.value"
                                     "document.getElementById(this.dataset.target).onkeyup()"])}
                    rotulo]])]
+              [:div {:id "codemirror"}]
               [:textarea
                {:id      "editor"
                 :onkeyup "this.dataset.state == 'done' ? this.dataset.state = 'idle' : null"
@@ -125,7 +132,7 @@ li {
               [:script {:type "application/x-scittle"}
                (scittle!
                  (require '[reagent.core :as r]
-                   '[reagent.dom :as rdom])
+                          '[reagent.dom :as rdom])
                  (defn render
                    []
                    (let [stderr (.getElementById js/document "stderr")
@@ -134,19 +141,19 @@ li {
                        (set! (-> editor .-dataset .-state) "loading")
                        (try
                          (let [component (-> js/window
-                                           .-scittle
-                                           .-core
-                                           (.eval_string (.-value editor)))]
+                                             .-scittle
+                                             .-core
+                                             (.eval_string (.-value editor)))]
                            (rdom/render (cond
                                           (fn? component) [component]
                                           (var? component) [component]
                                           (vector? component) component
                                           :else [:pre (pr-str component)])
-                             (.getElementById js/document "playground"))
+                                        (.getElementById js/document "playground"))
                            (set! (.-innerText stderr) ""))
                          (catch :default ex
                            (set! (.-innerText stderr) (str (ex-message ex) "\n"
-                                                        (str (ex-data ex)))))))
+                                                           (str (ex-data ex)))))))
                      (set! (-> editor .-dataset .-state) "done"))
                    (js/setTimeout render 1000))
                  (render))]]]
@@ -154,8 +161,8 @@ li {
                     {:lang "pt-br"}
                     head
                     body]
-                (h/html {:mode :html})
-                (str "<!DOCTYPE html>\n"))
+                   (h/html {:mode :html})
+                   (str "<!DOCTYPE html>\n"))
      :headers {"Content-Type"            (mime/default-mime-types "html")
                "Content-Security-Policy" ""}
      :status  200}))
@@ -171,10 +178,12 @@ li {
               (let [uri (-> request :uri (string/split #"\/"))
                     ^File f (apply io/file "." uri)
                     ^File f (if (.isDirectory f)
-                              (apply io/file "." (concat uri ["index.html"]))
-                              f)]
+                              (apply io/file "." (concat uri ["resources/index.html"]))
+                              f)
+                    _ (prn f)]
+
                 (when (and (-> response :status #{200})
-                        (-> ctx :request :request-method #{:get}))
+                           (-> ctx :request :request-method #{:get}))
                   (with-open [output-stream (io/output-stream f)]
                     (io.pedestal.http.impl.servlet-interceptor/write-body-to-stream (:body response) output-stream)))
                 (cond
@@ -189,15 +198,25 @@ li {
 
 (defn -main
   [& _]
-  (swap! *server (fn [st]
-                   (some-> st http/stop)
-                   (-> {::http/routes                (fn []
-                                                       (route/expand-routes @#'routes))
-                        ::http/port                  8080
-                        ::http/join?                 false
-                        ::http/not-found-interceptor not-found-interceptor
-                        ::http/type                  :jetty}
-                     http/default-interceptors
-                     http/dev-interceptors
-                     http/create-server
-                     http/start))))
+
+  (swap! *server
+         (fn [st]
+           ;; TODO add shadow-cljs compile
+           (some-> st http/stop)
+           (-> {::http/routes                (fn []
+                                               (route/expand-routes @#'routes))
+                ::http/port                  8080
+                ::http/join?                 false
+                ::http/not-found-interceptor not-found-interceptor
+                ::http/type                  :jetty}
+               http/default-interceptors
+               http/dev-interceptors
+               http/create-server
+               http/start))))
+
+(defn main-dev []
+  (start!)
+  (api/watch :codemirror)
+  (-main))
+
+#_(main-dev)
