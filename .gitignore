@@ -1,0 +1,8 @@
+.idea
+.shadow-cljs
+.cpcache
+node_modules
+.nrepl-port
+resources/public
+resources/index.html
+clj-br.github.io.iml
