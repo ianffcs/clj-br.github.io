@@ -61,13 +61,13 @@ li {
 
 (def lista-principal
   (into [:ul]
-        (for [{:keys [titulo
-                      href]} links]
-          [:li
-           [:a {:target "_blank"
-                :rel    "noreferrer noopener"
-                :href   href}
-            titulo]])))
+    (for [{:keys [titulo
+                  href]} links]
+      [:li
+       [:a {:target "_blank"
+            :rel    "noreferrer noopener"
+            :href   href}
+        titulo]])))
 
 (defn index
   [req]
@@ -201,7 +201,7 @@ li {
               [:script {:type "application/x-scittle"}
                (scittle!
                  (require '[reagent.core :as r]
-                          '[reagent.dom :as rdom])
+                   '[reagent.dom :as rdom])
                  (defn render
                    []
                    (let [stderr (.getElementById js/document "stderr")
@@ -210,28 +210,30 @@ li {
                        (set! (-> editor .-dataset .-state) "loading")
                        (try
                          (let [component (-> js/window
-                                             .-scittle
-                                             .-core
-                                             (.eval_string (.-value editor)))]
+                                           .-scittle
+                                           .-core
+                                           (.eval_string (.-value editor)))]
                            (rdom/render (cond
                                           (fn? component) [component]
                                           (var? component) [component]
                                           (vector? component) component
                                           :else [:pre (pr-str component)])
-                                        (.getElementById js/document "playground"))
+                             (.getElementById js/document "playground"))
                            (set! (.-innerText stderr) ""))
                          (catch :default ex
                            (set! (.-innerText stderr) (str (ex-message ex) "\n"
-                                                           (str (ex-data ex)))))))
+                                                        (str (ex-data ex)))))))
                      (set! (-> editor .-dataset .-state) "done"))
                    (js/setTimeout render 1000))
-                 (render))]]]
+                 (render))]
+              [:script {:src  "resources/public/js/main.js"
+                        :type "application/javascript"}]]]
     {:body    (->> [:html
                     {:lang "pt-br"}
                     head
                     body]
-                   (h/html {:mode :html})
-                   (str "<!DOCTYPE html>\n"))
+                (h/html {:mode :html})
+                (str "<!DOCTYPE html>\n"))
      :headers {"Content-Type"            (mime/default-mime-types "html")
                "Content-Security-Policy" ""}
      :status  200}))
@@ -252,7 +254,7 @@ li {
                     _ (prn f)]
 
                 (when (and (-> response :status #{200})
-                           (-> ctx :request :request-method #{:get}))
+                        (-> ctx :request :request-method #{:get}))
                   (with-open [output-stream (io/output-stream f)]
                     (io.pedestal.http.impl.servlet-interceptor/write-body-to-stream (:body response) output-stream)))
                 (cond
@@ -268,21 +270,20 @@ li {
 
 (defn -main
   [& _]
-
   (swap! *server
-         (fn [st]
-           ;; TODO add shadow-cljs compile
-           (some-> st http/stop)
-           (-> {::http/routes                (fn []
-                                               (route/expand-routes @#'routes))
-                ::http/port                  8080
-                ::http/join?                 false
-                ::http/not-found-interceptor not-found-interceptor
-                ::http/type                  :jetty}
-               http/default-interceptors
-               http/dev-interceptors
-               http/create-server
-               http/start))))
+    (fn [st]
+      ;; TODO add shadow-cljs compile
+      (some-> st http/stop)
+      (-> {::http/routes                (fn []
+                                          (route/expand-routes @#'routes))
+           ::http/port                  8080
+           ::http/join?                 false
+           ::http/not-found-interceptor not-found-interceptor
+           ::http/type                  :jetty}
+        http/default-interceptors
+        http/dev-interceptors
+        http/create-server
+        http/start))))
 
 (defn main-dev []
   (start!)
