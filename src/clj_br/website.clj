@@ -75,7 +75,7 @@ li {
                         :src         "https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"}]
               [:script {:src  "https://cdn.jsdelivr.net/gh/borkdude/scittle@0.0.2/js/scittle.reagent.js"
                         :type "application/javascript"}]
-              [:script {:src "resources/public/js/main.js"
+              [:script {:src  "resources/public/js/main.js"
                         :type "application/javascript"}]
               [:title "clj-br"]
               [:style (h/raw style)]]
@@ -91,25 +91,24 @@ li {
                {:style {:display         "flex"
                         :flex-wrap       "wrap"
                         :justify-content "center"}}
-               (for [{:keys [codigo rotulo]}
-                     [{:codigo (with-out-str
-                                 (pp/pprint lista-principal))
-                       :rotulo "Website"}
-                      {:codigo (scittle!
-                                 (+ 1 2))
-                       :rotulo "Soma simples"}
-                      {:codigo (scittle!
-                                 (require '[reagent.core :as r])
-                                 (def *n (r/atom 0))
-                                 (defn contador
-                                   []
-                                   [:div
-                                    [:div (str "Contador: " @*n)]
-                                    [:button
-                                     {:onClick (fn []
-                                                 (swap! *n inc))}
-                                     "incrementar"]]))
-                       :rotulo "Contador"}]]
+               (for [{:keys [codigo rotulo]} [{:codigo (with-out-str
+                                                         (pp/pprint lista-principal))
+                                               :rotulo "Website"}
+                                              {:codigo (scittle!
+                                                         (+ 1 2))
+                                               :rotulo "Soma simples"}
+                                              {:codigo (scittle!
+                                                         (require '[reagent.core :as r])
+                                                         (def *n (r/atom 0))
+                                                         (defn contador
+                                                           []
+                                                           [:div
+                                                            [:div (str "Contador: " @*n)]
+                                                            [:button
+                                                             {:onClick (fn []
+                                                                         (swap! *n inc))}
+                                                             "incrementar"]]))
+                                               :rotulo "Contador"}]]
                  [:li
                   [:button
                    {:data-value  codigo
