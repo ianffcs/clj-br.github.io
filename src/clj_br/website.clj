@@ -168,7 +168,6 @@ li {
  "
 
                                                :rotulo "Aplicativo de notas"}]]
-
                  [:li
                   [:button
                    {:data-value  codigo
